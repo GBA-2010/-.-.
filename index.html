@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кибер Решебник</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Russo+One&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow-y: auto;
+        }
+
+        .background-image {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://images.unsplash.com/photo-1577017040065-65052831a153?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover;
+            z-index: -2;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: -1;
+        }
+
+        .app-card {
+            background: rgba(18, 18, 28, 0.95);
+            border: 1px solid #00f3ff;
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.2);
+            padding: 40px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        h1 {
+            font-family: 'Russo One', sans-serif;
+            text-align: center;
+            color: #00f3ff;
+            text-transform: uppercase;
+            margin-top: 0;
+            font-size: 2rem;
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+        }
+
+        .input-group { margin-bottom: 20px; }
+
+        label {
+            display: block;
+            color: #bc13fe;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            background: #0b0b14;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input:focus { outline: none; border-color: #00f3ff; }
+
+        .file-area {
+            border: 2px dashed #00f3ff;
+            background: rgba(0, 243, 255, 0.03);
+            padding: 25px;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .file-area:hover { background: rgba(0, 243, 255, 0.1); }
+        .file-area span { font-size: 1rem; color: #aaa; }
+        input[type="file"] { display: none; }
+
+        #preview-img {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 15px;
+            border-radius: 8px;
+            display: none;
+            border: 1px solid #555;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(90deg, #bc13fe, #00f3ff);
+            border: none;
+            color: white;
+            font-family: 'Russo One', sans-serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border-radius: 8px;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 0 25px rgba(188, 19, 254, 0.5); }
+        button:disabled { background: #444; cursor: not-allowed; }
+
+        #result-container {
+            margin-top: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            border-left: 4px solid #00f3ff;
+        }
+
+        .markdown-body { font-size: 1rem; line-height: 1.6; color: #e0e0e0; }
+        code { background: #2a2a3d; padding: 2px 6px; border-radius: 4px; color: #00f3ff; }
+        
+        .loading-text {
+            text-align: center;
+            color: #00f3ff;
+            font-family: 'Russo One', sans-serif;
+            display: none;
+            margin-top: 15px;
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+    </style>
+</head>
+<body>
+
+    <div class="background-image"></div>
+    <div class="overlay"></div>
+
+    <div class="app-card">
+        <h1>КИБЕР РЕШЕБНИК</h1>
+
+        <!-- Поле ключа УБРАНО с экрана -->
+
+        <div class="input-group">
+            <label>📸 ФОТО ЗАДАЧИ</label>
+            <label class="file-area" for="file-input">
+                <span id="file-text">Нажмите здесь, чтобы выбрать фото</span>
+                <input type="file" id="file-input" accept="image/*">
+                <img id="preview-img" src="">
+            </label>
+        </div>
+
+        <div class="input-group">
+            <label>💬 ВОПРОС (НЕОБЯЗАТЕЛЬНО)</label>
+            <input type="text" id="user-prompt" placeholder="Например: объясни решение...">
+        </div>
+
+        <button id="solve-btn" onclick="solveHomework()">ЗАПУСТИТЬ АНАЛИЗ</button>
+        
+        <div id="loading" class="loading-text">⚡ ОБРАБОТКА ДАННЫХ...</div>
+
+        <div id="result-container">
+            <div id="solution-content" class="markdown-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // ВНИМАНИЕ! ВСТАВЬТЕ ВАШ КЛЮЧ ВНУТРЬ КАВЫЧЕК НИЖЕ:
+        // Пример: const API_KEY = "sk-proj-123456...";
+        // ============================================================
+        
+        const API_KEY = ""; // <--- СЮДА ВСТАВИТЬ КЛЮЧ (между кавычками)
+
+        // ============================================================
+
+        const fileInput = document.getElementById('file-input');
+        const previewImg = document.getElementById('preview-img');
+        const fileText = document.getElementById('file-text');
+        let base64Image = "";
+
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = 'block';
+                    fileText.style.display = 'none';
+                    base64Image = e.target.result.split(',')[1]; 
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function solveHomework() {
+            const userPrompt = document.getElementById('user-prompt').value;
+            const resultContainer = document.getElementById('result-container');
+            const solutionContent = document.getElementById('solution-content');
+            const loading = document.getElementById('loading');
+            const btn = document.getElementById('solve-btn');
+
+            // Проверка, вставили ли вы ключ в код
+            if (!API_KEY || API_KEY === "") {
+                alert("⛔ ОШИБКА: Вы не вставили ключ в код!\n\nОткройте файл index.html в блокноте, найдите строку 'const API_KEY' и вставьте туда ключ.");
+                return;
+            }
+
+            if (!base64Image) {
+                alert("⚠️ Пожалуйста, загрузите фото задачи!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "ВЫЧИСЛЕНИЕ...";
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+
+            const promptText = userPrompt ? userPrompt : "Реши задачу с картинки. Распиши решение пошагово и понятно на русском языке.";
+
+            try {
+                const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "Ты — умный помощник. Решай задачи четко. Используй Markdown."
+                            },
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: promptText },
+                                    {
+                                        type: "image_url",
+                                        image_url: {
+                                            url: `data:image/jpeg;base64,${base64Image}`
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        max_tokens: 1500
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                const markdownText = data.choices[0].message.content;
+                solutionContent.innerHTML = marked.parse(markdownText);
+                resultContainer.style.display = 'block';
+
+            } catch (error) {
+                alert("Ошибка: " + error.message);
+            } finally {
+                loading.style.display = 'none';
+                btn.disabled = false;
+                btn.innerText = "ЗАПУСТИТЬ АНАЛИЗ";
+            }
+        }
+    </script>
+
+</body>
+</html>
