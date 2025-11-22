@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кибер Решебник (Auto)</title>
+    <title>Кибер Решебник (Ctrl+V)</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Russo+One&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
@@ -20,6 +20,7 @@
             overflow-y: auto;
         }
 
+        /* Фон */
         .background-image {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -34,6 +35,7 @@
             z-index: -1;
         }
 
+        /* Карточка */
         .app-card {
             background: rgba(18, 18, 28, 0.95);
             border: 1px solid #00f3ff;
@@ -77,13 +79,13 @@
             font-size: 1rem;
             box-sizing: border-box;
         }
-
         input:focus { outline: none; border-color: #00f3ff; }
 
+        /* --- ОБЛАСТЬ ЗАГРУЗКИ (ИЗМЕНЕНО) --- */
         .file-area {
             border: 2px dashed #00f3ff;
-            background: rgba(0, 243, 255, 0.03);
-            padding: 25px;
+            background: rgba(0, 243, 255, 0.05);
+            padding: 30px;
             text-align: center;
             border-radius: 10px;
             cursor: pointer;
@@ -92,21 +94,29 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100px;
+            min-height: 120px;
         }
 
-        .file-area:hover { background: rgba(0, 243, 255, 0.1); }
+        .file-area:hover {
+            background: rgba(0, 243, 255, 0.15);
+            box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
+        }
         
-        .file-area span { 
-            font-size: 1rem; 
-            color: #aaa; 
+        /* Текст "Нажмите для выбора" */
+        .main-text { 
+            font-size: 1.1rem; 
+            color: #fff; 
+            font-weight: bold;
             pointer-events: none; 
         }
         
+        /* Текст "Или Ctrl+V" */
         .paste-hint {
-            font-size: 0.8rem !important;
+            font-size: 0.9rem !important;
             color: #00f3ff !important;
-            margin-top: 5px;
+            margin-top: 10px;
+            font-family: 'Russo One', sans-serif;
+            pointer-events: none;
         }
 
         input[type="file"] { display: none; }
@@ -121,6 +131,7 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
 
+        /* Кнопка */
         button {
             width: 100%;
             padding: 16px;
@@ -134,10 +145,10 @@
             text-transform: uppercase;
             margin-top: 10px;
         }
-
         button:hover { transform: translateY(-2px); box-shadow: 0 0 25px rgba(188, 19, 254, 0.5); }
         button:disabled { background: #444; cursor: not-allowed; }
 
+        /* Результат */
         #result-container {
             margin-top: 25px;
             background: rgba(255, 255, 255, 0.05);
@@ -160,24 +171,13 @@
         }
         @keyframes blink { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
 
-        /* Кнопка сброса ключа (маленькая в углу) */
+        /* Сброс ключа */
         .reset-key {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 0.7rem;
-            color: #555;
+            top: 10px; right: 10px;
+            font-size: 0.7rem; color: #555;
             cursor: pointer;
-            background: none;
-            border: none;
-            padding: 0;
-            width: auto;
-            margin: 0;
-            text-transform: none;
-            font-family: sans-serif;
         }
-        .reset-key:hover { color: #888; box-shadow: none; transform: none; }
-
     </style>
 </head>
 <body>
@@ -186,16 +186,18 @@
     <div class="overlay"></div>
 
     <div class="app-card">
-        <!-- Скрытая кнопка сброса, если вдруг ввели неправильный ключ -->
         <div class="reset-key" onclick="resetKey()">Сброс ключа</div>
 
         <h1>КИБЕР РЕШЕБНИК</h1>
 
         <div class="input-group">
             <label>📸 ФОТО ЗАДАЧИ</label>
+            
+            <!-- ВОТ ЗДЕСЬ ТЕКСТ, КОТОРЫЙ ВЫ ПРОСИЛИ -->
             <label class="file-area" id="drop-area" for="file-input">
-                <span id="file-text">Нажмите для выбора файла</span>
-                <span id="paste-text" class="paste-hint">ИЛИ НАЖМИТЕ CTRL+V (ВСТАВИТЬ)</span>
+                <span id="text-1" class="main-text">НАЖМИТЕ ДЛЯ ВЫБОРА ФАЙЛА</span>
+                <span id="text-2" class="paste-hint">ИЛИ НАЖМИТЕ CTRL + V</span>
+                
                 <input type="file" id="file-input" accept="image/*">
                 <img id="preview-img" src="">
             </label>
@@ -218,47 +220,45 @@
     <script>
         const fileInput = document.getElementById('file-input');
         const previewImg = document.getElementById('preview-img');
-        const fileText = document.getElementById('file-text');
-        const pasteText = document.getElementById('paste-text');
+        const text1 = document.getElementById('text-1');
+        const text2 = document.getElementById('text-2');
         let base64Image = "";
 
-        // --- ЛОГИКА КЛЮЧА (СКРЫТАЯ) ---
+        // --- ЛОГИКА КЛЮЧА ---
         function getApiKey() {
-            // Проверяем, есть ли ключ в памяти браузера
             let key = localStorage.getItem("openai_api_key");
-            
-            // Если ключа нет, спрашиваем один раз
             if (!key || key === "null" || key === "") {
-                key = prompt("Для работы требуется API ключ OpenAI. Введите его один раз, и я его запомню:");
-                if (key) {
-                    localStorage.setItem("openai_api_key", key.trim());
-                }
+                key = prompt("Введите ваш API ключ OpenAI (один раз):");
+                if (key) localStorage.setItem("openai_api_key", key.trim());
             }
             return key;
         }
 
         function resetKey() {
             localStorage.removeItem("openai_api_key");
-            alert("Ключ сброшен. При следующем запуске спрошу снова.");
+            alert("Ключ сброшен.");
         }
-        // -------------------------------
 
+        // --- ОБРАБОТКА ФАЙЛА ---
         function handleFile(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 previewImg.src = e.target.result;
                 previewImg.style.display = 'block';
-                fileText.style.display = 'none';
-                pasteText.style.display = 'none';
+                // Скрываем надписи
+                text1.style.display = 'none';
+                text2.style.display = 'none';
                 base64Image = e.target.result.split(',')[1]; 
             }
             reader.readAsDataURL(file);
         }
 
+        // 1. Клик по области (открывает проводник)
         fileInput.addEventListener('change', function() {
             if (this.files[0]) handleFile(this.files[0]);
         });
 
+        // 2. Вставка CTRL+V
         document.addEventListener('paste', function(event) {
             const items = (event.clipboardData || event.originalEvent.clipboardData).items;
             for (let index in items) {
@@ -270,14 +270,11 @@
         });
 
         async function solveHomework() {
-            // Получаем ключ из памяти или спрашиваем
             const apiKey = getApiKey();
-
             if (!apiKey) {
-                alert("Без ключа я не смогу связаться с ИИ. Попробуйте снова.");
+                alert("Нужен ключ для работы.");
                 return;
             }
-
             if (!base64Image) {
                 alert("⚠️ Сначала загрузите или вставьте (Ctrl+V) фото!");
                 return;
@@ -306,20 +303,12 @@
                     body: JSON.stringify({
                         model: "gpt-4o",
                         messages: [
-                            {
-                                role: "system",
-                                content: "Ты — умный помощник. Решай задачи четко. Используй Markdown."
-                            },
+                            { role: "system", content: "Ты — умный помощник. Решай задачи четко. Используй Markdown." },
                             {
                                 role: "user",
                                 content: [
                                     { type: "text", text: promptText },
-                                    {
-                                        type: "image_url",
-                                        image_url: {
-                                            url: `data:image/jpeg;base64,${base64Image}`
-                                        }
-                                    }
+                                    { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
                                 ]
                             }
                         ],
@@ -328,18 +317,15 @@
                 });
 
                 const data = await response.json();
-
                 if (data.error) {
-                    // Если ошибка связана с ключом, предлагаем сбросить его
                     if (data.error.code === "invalid_api_key") {
                         localStorage.removeItem("openai_api_key");
-                        throw new Error("Неверный API ключ. Я удалил его из памяти. Нажмите кнопку снова и введите правильный.");
+                        throw new Error("Неверный ключ. Я сбросил его. Попробуйте снова.");
                     }
                     throw new Error(data.error.message);
                 }
 
-                const markdownText = data.choices[0].message.content;
-                solutionContent.innerHTML = marked.parse(markdownText);
+                solutionContent.innerHTML = marked.parse(data.choices[0].message.content);
                 resultContainer.style.display = 'block';
 
             } catch (error) {
