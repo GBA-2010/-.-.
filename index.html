@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кибер Решебник</title>
+    <title>Кибер Решебник (Auto)</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Russo+One&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
@@ -88,10 +88,27 @@
             border-radius: 10px;
             cursor: pointer;
             transition: 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
         }
 
         .file-area:hover { background: rgba(0, 243, 255, 0.1); }
-        .file-area span { font-size: 1rem; color: #aaa; }
+        
+        .file-area span { 
+            font-size: 1rem; 
+            color: #aaa; 
+            pointer-events: none; 
+        }
+        
+        .paste-hint {
+            font-size: 0.8rem !important;
+            color: #00f3ff !important;
+            margin-top: 5px;
+        }
+
         input[type="file"] { display: none; }
 
         #preview-img {
@@ -101,6 +118,7 @@
             border-radius: 8px;
             display: none;
             border: 1px solid #555;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
 
         button {
@@ -141,6 +159,25 @@
             animation: blink 1.5s infinite;
         }
         @keyframes blink { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+        /* Кнопка сброса ключа (маленькая в углу) */
+        .reset-key {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.7rem;
+            color: #555;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: auto;
+            margin: 0;
+            text-transform: none;
+            font-family: sans-serif;
+        }
+        .reset-key:hover { color: #888; box-shadow: none; transform: none; }
+
     </style>
 </head>
 <body>
@@ -149,14 +186,16 @@
     <div class="overlay"></div>
 
     <div class="app-card">
-        <h1>КИБЕР РЕШЕБНИК</h1>
+        <!-- Скрытая кнопка сброса, если вдруг ввели неправильный ключ -->
+        <div class="reset-key" onclick="resetKey()">Сброс ключа</div>
 
-        <!-- Поле ключа УБРАНО с экрана -->
+        <h1>КИБЕР РЕШЕБНИК</h1>
 
         <div class="input-group">
             <label>📸 ФОТО ЗАДАЧИ</label>
-            <label class="file-area" for="file-input">
-                <span id="file-text">Нажмите здесь, чтобы выбрать фото</span>
+            <label class="file-area" id="drop-area" for="file-input">
+                <span id="file-text">Нажмите для выбора файла</span>
+                <span id="paste-text" class="paste-hint">ИЛИ НАЖМИТЕ CTRL+V (ВСТАВИТЬ)</span>
                 <input type="file" id="file-input" accept="image/*">
                 <img id="preview-img" src="">
             </label>
@@ -177,51 +216,78 @@
     </div>
 
     <script>
-        // ============================================================
-        // ВНИМАНИЕ! ВСТАВЬТЕ ВАШ КЛЮЧ ВНУТРЬ КАВЫЧЕК НИЖЕ:
-        // Пример: const API_KEY = "sk-proj-123456...";
-        // ============================================================
-        
-        const API_KEY = ""; // <--- СЮДА ВСТАВИТЬ КЛЮЧ (между кавычками)
-
-        // ============================================================
-
         const fileInput = document.getElementById('file-input');
         const previewImg = document.getElementById('preview-img');
         const fileText = document.getElementById('file-text');
+        const pasteText = document.getElementById('paste-text');
         let base64Image = "";
 
-        fileInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    previewImg.style.display = 'block';
-                    fileText.style.display = 'none';
-                    base64Image = e.target.result.split(',')[1]; 
+        // --- ЛОГИКА КЛЮЧА (СКРЫТАЯ) ---
+        function getApiKey() {
+            // Проверяем, есть ли ключ в памяти браузера
+            let key = localStorage.getItem("openai_api_key");
+            
+            // Если ключа нет, спрашиваем один раз
+            if (!key || key === "null" || key === "") {
+                key = prompt("Для работы требуется API ключ OpenAI. Введите его один раз, и я его запомню:");
+                if (key) {
+                    localStorage.setItem("openai_api_key", key.trim());
                 }
-                reader.readAsDataURL(file);
+            }
+            return key;
+        }
+
+        function resetKey() {
+            localStorage.removeItem("openai_api_key");
+            alert("Ключ сброшен. При следующем запуске спрошу снова.");
+        }
+        // -------------------------------
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewImg.style.display = 'block';
+                fileText.style.display = 'none';
+                pasteText.style.display = 'none';
+                base64Image = e.target.result.split(',')[1]; 
+            }
+            reader.readAsDataURL(file);
+        }
+
+        fileInput.addEventListener('change', function() {
+            if (this.files[0]) handleFile(this.files[0]);
+        });
+
+        document.addEventListener('paste', function(event) {
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.includes('image/')) {
+                    handleFile(item.getAsFile());
+                }
             }
         });
 
         async function solveHomework() {
+            // Получаем ключ из памяти или спрашиваем
+            const apiKey = getApiKey();
+
+            if (!apiKey) {
+                alert("Без ключа я не смогу связаться с ИИ. Попробуйте снова.");
+                return;
+            }
+
+            if (!base64Image) {
+                alert("⚠️ Сначала загрузите или вставьте (Ctrl+V) фото!");
+                return;
+            }
+
             const userPrompt = document.getElementById('user-prompt').value;
             const resultContainer = document.getElementById('result-container');
             const solutionContent = document.getElementById('solution-content');
             const loading = document.getElementById('loading');
             const btn = document.getElementById('solve-btn');
-
-            // Проверка, вставили ли вы ключ в код
-            if (!API_KEY || API_KEY === "") {
-                alert("⛔ ОШИБКА: Вы не вставили ключ в код!\n\nОткройте файл index.html в блокноте, найдите строку 'const API_KEY' и вставьте туда ключ.");
-                return;
-            }
-
-            if (!base64Image) {
-                alert("⚠️ Пожалуйста, загрузите фото задачи!");
-                return;
-            }
 
             btn.disabled = true;
             btn.innerText = "ВЫЧИСЛЕНИЕ...";
@@ -235,7 +301,7 @@
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${API_KEY}`
+                        "Authorization": `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
                         model: "gpt-4o",
@@ -264,6 +330,11 @@
                 const data = await response.json();
 
                 if (data.error) {
+                    // Если ошибка связана с ключом, предлагаем сбросить его
+                    if (data.error.code === "invalid_api_key") {
+                        localStorage.removeItem("openai_api_key");
+                        throw new Error("Неверный API ключ. Я удалил его из памяти. Нажмите кнопку снова и введите правильный.");
+                    }
                     throw new Error(data.error.message);
                 }
 
